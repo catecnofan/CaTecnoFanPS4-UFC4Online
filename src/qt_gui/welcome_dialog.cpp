@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2024 shadPS4 Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
-
+ 
 #include <QCheckBox>
 #include <QDesktopServices>
 #include <QHBoxLayout>
@@ -13,10 +13,10 @@
 #include <QVBoxLayout>
 #include "common/path_util.h"
 #include "welcome_dialog.h"
-
+ 
 #include <filesystem>
 namespace fs = std::filesystem;
-
+ 
 #include <vector>
 #include <QCompleter>
 #include <QDirIterator>
@@ -31,27 +31,27 @@ namespace fs = std::filesystem;
 #include <fmt/format.h>
 #include "main_window_themes.h"
 extern WindowThemes m_window_themes;
-
+ 
 using namespace Common::FS;
-
+ 
 WelcomeDialog::WelcomeDialog(WindowThemes* themes, QWidget* parent)
     : QDialog(parent), m_themes(themes) {
     Theme th = static_cast<Theme>(Config::getMainWindowTheme());
-
+ 
     m_window_themes.SetWindowTheme(th, nullptr);
     m_window_themes.ApplyThemeToDialog(this);
     SetupUI();
     ApplyTheme();
-    setWindowTitle("Welcome to Shadlix Build - shadPs4");
+    setWindowTitle("Bienvenido a CaTecnoFan - PlayStation 4 Emulator");
     setWindowIcon(QIcon(":images/shadps4.ico"));
     resize(700, 600);
     setMinimumSize(600, 550);
 }
-
+ 
 void WelcomeDialog::ApplyTheme() {
     if (!m_themes)
         return;
-
+ 
     QString textColor = m_themes->textColor().name();
     QString baseColor = m_themes->iconBaseColor().name();
     QString hoverColor = m_themes->iconHoverColor().name();
@@ -70,7 +70,7 @@ void WelcomeDialog::ApplyTheme() {
         }
     )")
                               .arg(baseColor, textColor, hoverColor);
-
+ 
     for (auto* button : findChildren<QPushButton*>()) {
         button->setStyleSheet(buttonStyle);
     }
@@ -79,19 +79,19 @@ void WelcomeDialog::ApplyTheme() {
     }
     setAutoFillBackground(true);
 }
-
+ 
 QMessageBox::StandardButton WelcomeDialog::showThemedMessageBox(
     QMessageBox::Icon icon, const QString& title, const QString& text,
     QMessageBox::StandardButtons buttons, QMessageBox::StandardButton defaultButton) {
     QMessageBox msgBox(icon, title, text, buttons, this);
     msgBox.setDefaultButton(defaultButton);
-
+ 
     if (m_themes && Config::getEnableColorFilter()) {
         msgBox.setPalette(qApp->palette());
         if (!qApp->styleSheet().isEmpty()) {
             msgBox.setStyleSheet(qApp->styleSheet());
         }
-
+ 
         QString textColor = m_themes->textColor().name();
         QString buttonStyle = QString(R"(
             QPushButton {
@@ -109,61 +109,43 @@ QMessageBox::StandardButton WelcomeDialog::showThemedMessageBox(
                                   .arg(textColor)
                                   .arg(qApp->palette().button().color().darker(150).name())
                                   .arg(m_themes->iconHoverColor().name());
-
+ 
         for (auto* button : msgBox.findChildren<QPushButton*>()) {
             button->setStyleSheet(buttonStyle);
         }
-
+ 
         for (auto* label : msgBox.findChildren<QLabel*>()) {
             label->setStyleSheet(QString("color: %1; background: transparent;").arg(textColor));
         }
     }
-
+ 
     return static_cast<QMessageBox::StandardButton>(msgBox.exec());
 }
-
+ 
 void WelcomeDialog::SetupUI() {
     auto* mainLayout = new QVBoxLayout(this);
-
+ 
     auto* logo = new QLabel();
     logo->setPixmap(QPixmap(":images/shadps4.png")
                         .scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     logo->setAlignment(Qt::AlignCenter);
     mainLayout->addWidget(logo);
+ 
+auto* title = new QLabel(
+"<h1>CaTecnoFan Edition</h1>"
+"<p style='color:#888;'>Based on ShadPS4 - Shadlix fork</p>"
+"<p style='font-size:13px; line-height:1.4;'>"
+"Adaptado para la comunidad CaTecnoFan con foco en estabilidad y experiencia de usuario.<br><br>"
+"Seleccioná cómo querés instalar el emulador."
+"</p>"
+"<small style='color:gray;'><i>Basado en shadPS4 — Créditos al equipo shadPS4 y Diegolix.</i></small>");
 
-    auto* title = new QLabel("<h2>Shadlix Build by Diegolix - Welcome</h2>"
-                             "<b>Included Features & Hacks:</b><br>");
     title->setAlignment(Qt::AlignCenter);
+    title->setWordWrap(true);
     mainLayout->addWidget(title);
-
-    auto* descLabel = new QLabel(
-        "<ul>"
-        "<li>Reworked GUI icons can hidden and show individually.</li>"
-        "<li>Cinema Games View (Netflix Style).</li>"
-        "<li>Gamehub and BigPicture Modes on Gui with auto start on each of them.</li>"
-        "<li>Reworked Settings Visuals Pause Menu ingame with access to all Settings per game.</li>"
-        "<li>A Sound hack that prevents Bloodborne from losing audio. (originally made "
-        "by rainvmaker)</li>"
-        "<li>Automatic backups via a checkbox in the Graphics tab in Settings.</li>"
-        "<li>NEW Games Menu button to trigger Big Picture Mode.</li>"
-        "<li>NEW Cinematic Frame View for games like a Netflix Viewer.</li>"
-        "<li>NEW PKG button to install Games if you have them Packed.</li>"
-        "<li>A PM4 Type 0 hack to avoid related issues. "
-        "<i>(Do not use this with the \"Copy Buffer\" checkbox under the Debug tab in "
-        "Settings.)</i></li>"
-        "<li>Several NEW Hotkeys like Mute sound - and Trophy viewer while ingame.</li>"
-        "<li>Water Flickering Hack(Bloodborne).</li>"
-        "<li>READBACKS OPTIMIZATION (Smooth no extra stutters anymore) Fast and Unsafe "
-        "are for Bloodborne.</li>"
-        "<li>Restart and Stop buttons working as the QTLauncher.</li>"
-        "<li>Keyboard and mouse custom button mapping for FromSoftware games.</li>"
-        "<li>An Experimental tab with all new features and both isDevKit and Neo Mode "
-        "(PS4 Pro Mode) checkboxes in Settings.</li>"
-        "<li>Safe Tiling and USB PRs developed for main Shad.</li>"
-        "</ul>"
-        "<br>");
-    descLabel->setWordWrap(true);
-
+ 
+    auto* descLabel = new QLabel("");
+ 
     auto* scroll = new QScrollArea();
     scroll->setWidget(descLabel);
     scroll->setWidgetResizable(true);
@@ -171,20 +153,20 @@ void WelcomeDialog::SetupUI() {
     scroll->setMinimumHeight(200);
     scroll->setStyleSheet("background: transparent;");
     scroll->viewport()->setStyleSheet("background: transparent;");
-
+ 
     mainLayout->addWidget(scroll);
-
+ 
     mainLayout->addSpacing(10);
-
+ 
     auto* installLabel =
-        new QLabel("Please select your installation type:<br>"
-                   "<b>Portable</b> — creates a <code>user</code> folder next to the executable "
-                   "(recommended).<br>"
-                   "<b>Global</b> — stores data in AppData.<br>"
-                   "Select your preferred installation type:");
+        new QLabel("Seleccioná tu tipo de instalación:<br>"
+                   "<b>Portable</b> — crea una carpeta <code>user</code> junto al ejecutable "
+                   "(recomendado).<br>"
+                   "<b>Global</b> — guarda los datos en AppData.<br>");
     installLabel->setAlignment(Qt::AlignCenter);
+    installLabel->setWordWrap(true);
     mainLayout->addWidget(installLabel);
-
+ 
     auto* buttonLayout = new QHBoxLayout();
     auto* portableBtn = new QPushButton("Portable");
     auto* globalBtn = new QPushButton("Global");
@@ -195,11 +177,11 @@ void WelcomeDialog::SetupUI() {
     buttonLayout->addWidget(globalBtn);
     buttonLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
-
-    m_skipCheck = new QCheckBox("Don't show this screen again");
+ 
+    m_skipCheck = new QCheckBox("No mostrar esta pantalla nuevamente");
     m_skipCheck->setChecked(false);
     mainLayout->addWidget(m_skipCheck, 0, Qt::AlignLeft);
-
+ 
 #if (QT_VERSION < QT_VERSION_CHECK(6, 7, 0))
     connect(m_skipCheck, &QCheckBox::stateChanged, this,
             [this](int) { m_skipNextLaunch = m_skipCheck->isChecked(); });
@@ -207,8 +189,8 @@ void WelcomeDialog::SetupUI() {
     connect(m_skipCheck, &QCheckBox::checkStateChanged, this,
             [this](int) { m_skipNextLaunch = m_skipCheck->isChecked(); });
 #endif
-
-    QPushButton* updateButton = new QPushButton(tr("Close"), this);
+ 
+    QPushButton* updateButton = new QPushButton(tr("Cerrar"), this);
     updateButton->setEnabled(true);
     updateButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     mainLayout->addWidget(updateButton, 0, Qt::AlignLeft);
@@ -234,38 +216,37 @@ void WelcomeDialog::SetupUI() {
     discord->setOpenExternalLinks(true);
     footer->addWidget(discord);
     mainLayout->addLayout(footer);
-
+ 
     connect(portableBtn, &QPushButton::clicked, this, [this]() {
         m_portableChosen = true;
         m_userMadeChoice = true;
-
+ 
         auto portable_dir = Common::FS::GetPortablePath();
         auto global_dir = Common::FS::GetGlobalPath();
         bool has_existing_config = false;
-
+ 
         if (std::filesystem::exists(global_dir)) {
             auto global_config_path = global_dir / "config.toml";
             if (std::filesystem::exists(global_config_path)) {
                 has_existing_config = true;
                 QMessageBox::StandardButton reply = showThemedMessageBox(
-                    QMessageBox::Question, tr("Global folder detected"),
-                    tr("Global folder with configuration already exists.\n\nMove its content to "
-                       "portable?\n"
-                       "Click No to just create a new portable folder and leave global intact."),
+                    QMessageBox::Question, tr("Carpeta global detectada"),
+                    tr("Ya existe una carpeta global con configuración.\n\n¿Mover su contenido a portable?\n"
+                       "Hacé clic en No para crear una nueva carpeta portable y dejar la global intacta."),
                     QMessageBox::Yes | QMessageBox::No);
                 if (reply == QMessageBox::Yes) {
                     try {
                         if (std::filesystem::exists(portable_dir)) {
                             std::filesystem::remove_all(portable_dir);
                         }
-
+ 
                         std::filesystem::rename(global_dir, portable_dir);
-
+ 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
-                            QMessageBox::Critical, tr("Move Failed"),
-                            tr("Failed to move global folder to portable: %1").arg(e.what()),
+                            QMessageBox::Critical, tr("Error al mover"),
+                            tr("No se pudo mover la carpeta global a portable: %1").arg(e.what()),
                             QMessageBox::Ok);
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     }
@@ -274,25 +255,25 @@ void WelcomeDialog::SetupUI() {
                 }
             } else {
                 QMessageBox::StandardButton reply = showThemedMessageBox(
-                    QMessageBox::Question, tr("Global folder detected"),
-                    tr("Global folder already exists.\n\nMove its content to portable?\n"
-                       "Click No to just create a new portable folder and leave global intact."),
+                    QMessageBox::Question, tr("Carpeta global detectada"),
+                    tr("Ya existe una carpeta global.\n\n¿Mover su contenido a portable?\n"
+                       "Hacé clic en No para crear una nueva carpeta portable y dejar la global intacta."),
                     QMessageBox::Yes | QMessageBox::No);
                 if (reply == QMessageBox::Yes) {
                     try {
                         if (std::filesystem::exists(portable_dir)) {
                             std::filesystem::remove_all(portable_dir);
                         }
-
+ 
                         std::filesystem::rename(global_dir, portable_dir);
-
+ 
                         has_existing_config = true;
-
+ 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
-                            QMessageBox::Critical, tr("Move Failed"),
-                            tr("Failed to move global folder to portable: %1").arg(e.what()),
+                            QMessageBox::Critical, tr("Error al mover"),
+                            tr("No se pudo mover la carpeta global a portable: %1").arg(e.what()),
                             QMessageBox::Ok);
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     }
@@ -303,53 +284,52 @@ void WelcomeDialog::SetupUI() {
         } else {
             Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
         }
-
-        showThemedMessageBox(QMessageBox::Information, tr("Portable Folder Set"),
-                             tr("Portable Folder Successfully Set"), QMessageBox::Ok);
-
+ 
+        showThemedMessageBox(QMessageBox::Information, tr("Carpeta Portable Configurada"),
+                             tr("Carpeta Portable configurada correctamente"), QMessageBox::Ok);
+ 
         const auto new_user_dir = Common::FS::GetUserPath(Common::FS::PathType::UserDir);
         const auto config_path = new_user_dir / "config.toml";
         if (std::filesystem::exists(config_path)) {
             Config::load(config_path);
         }
-
+ 
         Config::setShowWelcomeDialog(false);
         Config::save(config_path, false);
-
+ 
         accept();
     });
-
+ 
     connect(globalBtn, &QPushButton::clicked, this, [this]() {
         m_portableChosen = false;
         m_userMadeChoice = true;
-
+ 
         auto portable_dir = Common::FS::GetPortablePath();
         auto global_dir = Common::FS::GetGlobalPath();
         bool has_existing_config = false;
-
+ 
         if (std::filesystem::exists(portable_dir)) {
             auto portable_config_path = portable_dir / "config.toml";
             if (std::filesystem::exists(portable_config_path)) {
                 has_existing_config = true;
                 QMessageBox::StandardButton reply = showThemedMessageBox(
-                    QMessageBox::Question, tr("Portable folder detected"),
-                    tr("Portable folder with configuration already exists.\n\nMove its content to "
-                       "global?\n"
-                       "Click No to just create a new global folder and leave portable intact."),
+                    QMessageBox::Question, tr("Carpeta portable detectada"),
+                    tr("Ya existe una carpeta portable con configuración.\n\n¿Mover su contenido a global?\n"
+                       "Hacé clic en No para crear una nueva carpeta global y dejar la portable intacta."),
                     QMessageBox::Yes | QMessageBox::No);
                 if (reply == QMessageBox::Yes) {
                     try {
                         if (std::filesystem::exists(global_dir)) {
                             std::filesystem::remove_all(global_dir);
                         }
-
+ 
                         std::filesystem::rename(portable_dir, global_dir);
-
+ 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
-                            QMessageBox::Critical, tr("Move Failed"),
-                            tr("Failed to move portable folder to global: %1").arg(e.what()),
+                            QMessageBox::Critical, tr("Error al mover"),
+                            tr("No se pudo mover la carpeta portable a global: %1").arg(e.what()),
                             QMessageBox::Ok);
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     }
@@ -358,25 +338,25 @@ void WelcomeDialog::SetupUI() {
                 }
             } else {
                 QMessageBox::StandardButton reply = showThemedMessageBox(
-                    QMessageBox::Question, tr("Portable folder detected"),
-                    tr("Portable folder already exists.\n\nMove its content to global?\n"
-                       "Click No to just create a new global folder and leave portable intact."),
+                    QMessageBox::Question, tr("Carpeta portable detectada"),
+                    tr("Ya existe una carpeta portable.\n\n¿Mover su contenido a global?\n"
+                       "Hacé clic en No para crear una nueva carpeta global y dejar la portable intacta."),
                     QMessageBox::Yes | QMessageBox::No);
                 if (reply == QMessageBox::Yes) {
                     try {
                         if (std::filesystem::exists(global_dir)) {
                             std::filesystem::remove_all(global_dir);
                         }
-
+ 
                         std::filesystem::rename(portable_dir, global_dir);
-
+ 
                         has_existing_config = true;
-
+ 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
-                            QMessageBox::Critical, tr("Move Failed"),
-                            tr("Failed to move portable folder to global: %1").arg(e.what()),
+                            QMessageBox::Critical, tr("Error al mover"),
+                            tr("No se pudo mover la carpeta portable a global: %1").arg(e.what()),
                             QMessageBox::Ok);
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     }
@@ -391,11 +371,10 @@ void WelcomeDialog::SetupUI() {
                 Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
             } else {
                 QMessageBox::StandardButton reply =
-                    showThemedMessageBox(QMessageBox::Question, tr("Global folder detected"),
-                                         tr("Global folder already exists.\n\nThis folder will be "
-                                            "used for the Shadlix build.\n"
-                                            "A new configuration file will be created for this "
-                                            "fork.\n\nContinue with Global mode?"),
+                    showThemedMessageBox(QMessageBox::Question, tr("Carpeta global detectada"),
+                                         tr("Ya existe una carpeta global.\n\nEsta carpeta será "
+                                            "usada por CaTecnoFan.\n"
+                                            "Se creará un nuevo archivo de configuración.\n\n¿Continuar en modo Global?"),
                                          QMessageBox::Yes | QMessageBox::No);
                 if (reply == QMessageBox::Yes) {
                     Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
@@ -406,19 +385,19 @@ void WelcomeDialog::SetupUI() {
         } else {
             Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
         }
-
-        showThemedMessageBox(QMessageBox::Information, tr("Global Folder Set"),
-                             tr("Global Folder Successfully Set"), QMessageBox::Ok);
-
+ 
+        showThemedMessageBox(QMessageBox::Information, tr("Carpeta Global Configurada"),
+                             tr("Carpeta Global configurada correctamente"), QMessageBox::Ok);
+ 
         const auto new_user_dir = Common::FS::GetUserPath(Common::FS::PathType::UserDir);
         const auto config_path = new_user_dir / "config.toml";
         if (std::filesystem::exists(config_path)) {
             Config::load(config_path);
         }
-
+ 
         Config::setShowWelcomeDialog(false);
         Config::save(config_path, false);
-
+ 
         accept();
     });
 }

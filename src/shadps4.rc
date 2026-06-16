@@ -26,13 +26,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "\0"
-            VALUE "FileDescription", "shadPS4 - PlayStation 4 Emulator\0"
+            VALUE "CompanyName", "CaTecnoFan\0"
+            VALUE "FileDescription", "CaTecnoFan - PlayStation 4 Emulator\0"
             VALUE "FileVersion", xstr(EMULATOR_VERSION_MAJOR) "." xstr(EMULATOR_VERSION_MINOR) "." xstr(EMULATOR_VERSION_PATCH) ".0\0"
-            VALUE "InternalName", "shadPS4\0"
-            VALUE "LegalCopyright", "Copyright 2025 shadPS4 Team\0"
-            VALUE "OriginalFilename", "shadPS4.exe\0"
-            VALUE "ProductName", "shadPS4\0"
+            VALUE "InternalName", "CaTecnoFan\0"
+            VALUE "LegalCopyright", "Copyright 2025 CaTecnoFan\0"
+            VALUE "OriginalFilename", "CaTecnoFan.exe\0"
+            VALUE "ProductName", "CaTecnoFan\0"
             VALUE "ProductVersion", xstr(EMULATOR_VERSION_MAJOR) "." xstr(EMULATOR_VERSION_MINOR) "." xstr(EMULATOR_VERSION_PATCH) ".0\0"
         END
     END

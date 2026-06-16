@@ -261,12 +261,12 @@ bool MainWindow::Init() {
     std::string window_title = "";
     std::string remote_url(Common::g_scm_remote_url);
     std::string remote_host = Common::GetRemoteNameFromLink();
-    if (Common::g_is_release) {
-        if (remote_host == "shadps4-emu" || remote_url.length() == 0) {
-            window_title = fmt::format("shadPS4 v{}", Common::g_version);
-        } else {
-            window_title = fmt::format("shadPS4 {}/v{}", remote_host, Common::g_version);
-        }
+if (Common::g_is_release) {
+    if (remote_host == "shadps4-emu" || remote_url.length() == 0) {
+        window_title = fmt::format("ShadPS4 CaTecnoFan Edition v{}", Common::g_version);
+    } else {
+        window_title = fmt::format("ShadPS4 CaTecnoFan Edition {}/v{}", remote_host, Common::g_version);
+    }
     } else {
         if (remote_host == "shadps4-emu" || remote_url.length() == 0) {
             window_title = fmt::format("shadPS4 v{} {} {}", Common::g_version, Common::g_scm_branch,
