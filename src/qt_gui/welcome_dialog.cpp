@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2024 shadPS4 Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
- 
+
 #include <QCheckBox>
 #include <QDesktopServices>
 #include <QHBoxLayout>
@@ -13,10 +13,10 @@
 #include <QVBoxLayout>
 #include "common/path_util.h"
 #include "welcome_dialog.h"
- 
+
 #include <filesystem>
 namespace fs = std::filesystem;
- 
+
 #include <vector>
 #include <QCompleter>
 #include <QDirIterator>
@@ -31,27 +31,27 @@ namespace fs = std::filesystem;
 #include <fmt/format.h>
 #include "main_window_themes.h"
 extern WindowThemes m_window_themes;
- 
+
 using namespace Common::FS;
- 
+
 WelcomeDialog::WelcomeDialog(WindowThemes* themes, QWidget* parent)
     : QDialog(parent), m_themes(themes) {
     Theme th = static_cast<Theme>(Config::getMainWindowTheme());
- 
+
     m_window_themes.SetWindowTheme(th, nullptr);
     m_window_themes.ApplyThemeToDialog(this);
     SetupUI();
     ApplyTheme();
-    setWindowTitle("Bienvenido a CaTecnoFan - PlayStation 4 Emulator");
+    setWindowTitle("Bienvenido a CaTecnoFan - ShadCTF PS4");
     setWindowIcon(QIcon(":images/shadps4.ico"));
     resize(700, 600);
     setMinimumSize(600, 550);
 }
- 
+
 void WelcomeDialog::ApplyTheme() {
     if (!m_themes)
         return;
- 
+
     QString textColor = m_themes->textColor().name();
     QString baseColor = m_themes->iconBaseColor().name();
     QString hoverColor = m_themes->iconHoverColor().name();
@@ -70,7 +70,7 @@ void WelcomeDialog::ApplyTheme() {
         }
     )")
                               .arg(baseColor, textColor, hoverColor);
- 
+
     for (auto* button : findChildren<QPushButton*>()) {
         button->setStyleSheet(buttonStyle);
     }
@@ -79,19 +79,19 @@ void WelcomeDialog::ApplyTheme() {
     }
     setAutoFillBackground(true);
 }
- 
+
 QMessageBox::StandardButton WelcomeDialog::showThemedMessageBox(
     QMessageBox::Icon icon, const QString& title, const QString& text,
     QMessageBox::StandardButtons buttons, QMessageBox::StandardButton defaultButton) {
     QMessageBox msgBox(icon, title, text, buttons, this);
     msgBox.setDefaultButton(defaultButton);
- 
+
     if (m_themes && Config::getEnableColorFilter()) {
         msgBox.setPalette(qApp->palette());
         if (!qApp->styleSheet().isEmpty()) {
             msgBox.setStyleSheet(qApp->styleSheet());
         }
- 
+
         QString textColor = m_themes->textColor().name();
         QString buttonStyle = QString(R"(
             QPushButton {
@@ -109,43 +109,43 @@ QMessageBox::StandardButton WelcomeDialog::showThemedMessageBox(
                                   .arg(textColor)
                                   .arg(qApp->palette().button().color().darker(150).name())
                                   .arg(m_themes->iconHoverColor().name());
- 
+
         for (auto* button : msgBox.findChildren<QPushButton*>()) {
             button->setStyleSheet(buttonStyle);
         }
- 
+
         for (auto* label : msgBox.findChildren<QLabel*>()) {
             label->setStyleSheet(QString("color: %1; background: transparent;").arg(textColor));
         }
     }
- 
+
     return static_cast<QMessageBox::StandardButton>(msgBox.exec());
 }
- 
+
 void WelcomeDialog::SetupUI() {
     auto* mainLayout = new QVBoxLayout(this);
- 
+
     auto* logo = new QLabel();
     logo->setPixmap(QPixmap(":images/shadps4.png")
                         .scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     logo->setAlignment(Qt::AlignCenter);
     mainLayout->addWidget(logo);
- 
-auto* title = new QLabel(
-"<h1>CaTecnoFan Edition</h1>"
-"<p style='color:#888;'>Based on ShadPS4 - Shadlix fork</p>"
-"<p style='font-size:13px; line-height:1.4;'>"
-"Adaptado para la comunidad CaTecnoFan con foco en estabilidad y experiencia de usuario.<br><br>"
-"Seleccioná cómo querés instalar el emulador."
-"</p>"
-"<small style='color:gray;'><i>Basado en shadPS4 — Créditos al equipo shadPS4 y Diegolix.</i></small>");
+
+    auto* title = new QLabel(
+        "<h1>CaTecnoFan Edition</h1>"
+        "<p style='color:#888;'>Based on ShadPS4 - Shadlix fork</p>"
+        "<p style='font-size:13px; line-height:1.4;'>"
+        "Adaptado para la comunidad CaTecnoFan con foco en estabilidad y experiencia de usuario.<br><br>"
+        "Hacé clic en <b>Continuar</b> para comenzar."
+        "</p>"
+        "<small style='color:gray;'><i>Basado en shadPS4 — Créditos al equipo shadPS4 y Diegolix.</i></small>");
 
     title->setAlignment(Qt::AlignCenter);
     title->setWordWrap(true);
     mainLayout->addWidget(title);
- 
+
     auto* descLabel = new QLabel("");
- 
+
     auto* scroll = new QScrollArea();
     scroll->setWidget(descLabel);
     scroll->setWidgetResizable(true);
@@ -153,35 +153,40 @@ auto* title = new QLabel(
     scroll->setMinimumHeight(200);
     scroll->setStyleSheet("background: transparent;");
     scroll->viewport()->setStyleSheet("background: transparent;");
- 
+
     mainLayout->addWidget(scroll);
- 
+
     mainLayout->addSpacing(10);
- 
-    auto* installLabel =
-        new QLabel("Seleccioná tu tipo de instalación:<br>"
-                   "<b>Portable</b> — crea una carpeta <code>user</code> junto al ejecutable "
-                   "(recomendado).<br>"
-                   "<b>Global</b> — guarda los datos en AppData.<br>");
-    installLabel->setAlignment(Qt::AlignCenter);
-    installLabel->setWordWrap(true);
-    mainLayout->addWidget(installLabel);
- 
+
+    // Botón principal: Continuar (= Global)
     auto* buttonLayout = new QHBoxLayout();
-    auto* portableBtn = new QPushButton("Portable");
-    auto* globalBtn = new QPushButton("Global");
-    portableBtn->setMinimumWidth(120);
-    globalBtn->setMinimumWidth(120);
+    auto* globalBtn = new QPushButton("Continuar");
+    globalBtn->setMinimumWidth(160);
     buttonLayout->addStretch();
-    buttonLayout->addWidget(portableBtn);
     buttonLayout->addWidget(globalBtn);
     buttonLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
- 
+
+    // Opciones avanzadas — oculta el botón Portable
+    auto* advancedBtn = new QPushButton("Opciones avanzadas");
+    advancedBtn->setFlat(true);
+    advancedBtn->setStyleSheet("color: gray; text-decoration: underline; border: none;");
+    mainLayout->addWidget(advancedBtn, 0, Qt::AlignCenter);
+
+    auto* portableBtn = new QPushButton("Portable");
+    portableBtn->setMinimumWidth(120);
+    portableBtn->setVisible(false); // oculto por defecto
+    mainLayout->addWidget(portableBtn, 0, Qt::AlignCenter);
+
+    connect(advancedBtn, &QPushButton::clicked, this, [portableBtn, advancedBtn]() {
+        portableBtn->setVisible(true);
+        advancedBtn->setVisible(false);
+    });
+
     m_skipCheck = new QCheckBox("No mostrar esta pantalla nuevamente");
     m_skipCheck->setChecked(false);
     mainLayout->addWidget(m_skipCheck, 0, Qt::AlignLeft);
- 
+
 #if (QT_VERSION < QT_VERSION_CHECK(6, 7, 0))
     connect(m_skipCheck, &QCheckBox::stateChanged, this,
             [this](int) { m_skipNextLaunch = m_skipCheck->isChecked(); });
@@ -189,7 +194,7 @@ auto* title = new QLabel(
     connect(m_skipCheck, &QCheckBox::checkStateChanged, this,
             [this](int) { m_skipNextLaunch = m_skipCheck->isChecked(); });
 #endif
- 
+
     QPushButton* updateButton = new QPushButton(tr("Cerrar"), this);
     updateButton->setEnabled(true);
     updateButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -208,6 +213,7 @@ auto* title = new QLabel(
         Config::save(config_path, false);
         accept();
     });
+
     auto* footer = new QHBoxLayout();
     footer->addStretch();
     auto* discord = new QLabel("<a href=\"https://discord.gg/jgpqB7gUxG\">"
@@ -216,15 +222,16 @@ auto* title = new QLabel(
     discord->setOpenExternalLinks(true);
     footer->addWidget(discord);
     mainLayout->addLayout(footer);
- 
+
+    // Portable (comportamiento idéntico al original)
     connect(portableBtn, &QPushButton::clicked, this, [this]() {
         m_portableChosen = true;
         m_userMadeChoice = true;
- 
+
         auto portable_dir = Common::FS::GetPortablePath();
         auto global_dir = Common::FS::GetGlobalPath();
         bool has_existing_config = false;
- 
+
         if (std::filesystem::exists(global_dir)) {
             auto global_config_path = global_dir / "config.toml";
             if (std::filesystem::exists(global_config_path)) {
@@ -239,9 +246,7 @@ auto* title = new QLabel(
                         if (std::filesystem::exists(portable_dir)) {
                             std::filesystem::remove_all(portable_dir);
                         }
- 
                         std::filesystem::rename(global_dir, portable_dir);
- 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
@@ -264,16 +269,13 @@ auto* title = new QLabel(
                         if (std::filesystem::exists(portable_dir)) {
                             std::filesystem::remove_all(portable_dir);
                         }
- 
                         std::filesystem::rename(global_dir, portable_dir);
- 
                         has_existing_config = true;
- 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
                             QMessageBox::Critical, tr("Error al mover"),
-                            tr("No se pudo mover la carpeta global a portable: %1").arg(e.what()),
+                            tr("No se pudo mover la carpeta portable a global: %1").arg(e.what()),
                             QMessageBox::Ok);
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
                     }
@@ -284,30 +286,31 @@ auto* title = new QLabel(
         } else {
             Common::FS::InitializeUserPaths(Common::FS::PathInitState::Portable);
         }
- 
+
         showThemedMessageBox(QMessageBox::Information, tr("Carpeta Portable Configurada"),
                              tr("Carpeta Portable configurada correctamente"), QMessageBox::Ok);
- 
+
         const auto new_user_dir = Common::FS::GetUserPath(Common::FS::PathType::UserDir);
         const auto config_path = new_user_dir / "config.toml";
         if (std::filesystem::exists(config_path)) {
             Config::load(config_path);
         }
- 
+
         Config::setShowWelcomeDialog(false);
         Config::save(config_path, false);
- 
+
         accept();
     });
- 
+
+    // Continuar (= Global, comportamiento idéntico al original)
     connect(globalBtn, &QPushButton::clicked, this, [this]() {
         m_portableChosen = false;
         m_userMadeChoice = true;
- 
+
         auto portable_dir = Common::FS::GetPortablePath();
         auto global_dir = Common::FS::GetGlobalPath();
         bool has_existing_config = false;
- 
+
         if (std::filesystem::exists(portable_dir)) {
             auto portable_config_path = portable_dir / "config.toml";
             if (std::filesystem::exists(portable_config_path)) {
@@ -322,9 +325,7 @@ auto* title = new QLabel(
                         if (std::filesystem::exists(global_dir)) {
                             std::filesystem::remove_all(global_dir);
                         }
- 
                         std::filesystem::rename(portable_dir, global_dir);
- 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
@@ -347,11 +348,8 @@ auto* title = new QLabel(
                         if (std::filesystem::exists(global_dir)) {
                             std::filesystem::remove_all(global_dir);
                         }
- 
                         std::filesystem::rename(portable_dir, global_dir);
- 
                         has_existing_config = true;
- 
                         Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
                     } catch (const std::filesystem::filesystem_error& e) {
                         showThemedMessageBox(
@@ -385,19 +383,19 @@ auto* title = new QLabel(
         } else {
             Common::FS::InitializeUserPaths(Common::FS::PathInitState::Global);
         }
- 
+
         showThemedMessageBox(QMessageBox::Information, tr("Carpeta Global Configurada"),
                              tr("Carpeta Global configurada correctamente"), QMessageBox::Ok);
- 
+
         const auto new_user_dir = Common::FS::GetUserPath(Common::FS::PathType::UserDir);
         const auto config_path = new_user_dir / "config.toml";
         if (std::filesystem::exists(config_path)) {
             Config::load(config_path);
         }
- 
+
         Config::setShowWelcomeDialog(false);
         Config::save(config_path, false);
- 
+
         accept();
     });
 }
