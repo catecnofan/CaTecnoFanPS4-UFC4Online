@@ -27,6 +27,12 @@ static s32 g_connection_id_counter = 0;
 
 std::string host_override = "localhost";
 
+// CTF_TRACE probe: [0] is a fixed magic value (never rewritten, so it stays findable in memory
+// via a value search even after the game has called sceHttpSendRequest); [1] receives the last
+// req_id seen. Set a WRITE breakpoint on &ctf_trace_probe[1] to break only inside
+// sceHttpSendRequest, with zero noise from unrelated libraries reading nearby memory.
+static volatile s32 ctf_trace_probe[2] = {0x7C7C1234, 0};
+
 std::string ReplaceHost(std::string url, const std::string& new_host, bool force_http = true) {
 
     std::string separator = "://";
@@ -768,6 +774,7 @@ int PS4_SYSV_ABI sceHttpsEnableOptionPrivate() {
 }
 
 int PS4_SYSV_ABI sceHttpSendRequest(int req_id, const void* post_data, u64 size) {
+    ctf_trace_probe[1] = req_id; // CTF_TRACE: write breakpoint target (see ctf_trace_probe decl)
 
     LOG_INFO(Lib_Http, "called, request id = '{}', size = '{}'", req_id, size);
 
