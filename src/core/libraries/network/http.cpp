@@ -776,6 +776,11 @@ int PS4_SYSV_ABI sceHttpsEnableOptionPrivate() {
 int PS4_SYSV_ABI sceHttpSendRequest(int req_id, const void* post_data, u64 size) {
     ctf_trace_probe[1] = req_id; // CTF_TRACE: write breakpoint target (see ctf_trace_probe decl)
 
+    // CTF_TRACE: log the guest return address that called into this function, so the DirtySDK
+    // caller can be located in eboot.elf via static analysis (avoids the flaky live debugger).
+    LOG_INFO(Lib_Http, "CTF_TRACE_CALLER sceHttpSendRequest req_id={} caller=0x{:x}", req_id,
+             reinterpret_cast<u64>(__builtin_return_address(0)));
+
     LOG_INFO(Lib_Http, "called, request id = '{}', size = '{}'", req_id, size);
 
     if (!g_isHttpInitialized) {
