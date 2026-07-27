@@ -67,11 +67,12 @@ public:
     RequestTemplate* req_template = nullptr;
 
     void SendRequest() {
-        request_future = std::async(std::launch::async, [this] { _SendRequest(); });
-
-        if (!req_template->is_async) {
-            WaitForRequest();
-        }
+        // CTF: run the send SYNCHRONOUSLY. DirtySDK deletes the request (sceHttpDeleteRequest)
+        // immediately after sceHttpSendRequest returns; with the previous async dispatch, the
+        // request object was destroyed while _SendRequest was still using it (use-after-free →
+        // empty host → httplib Connection error, 0 bytes sent). Running inline guarantees the
+        // request finishes before it can be deleted. (localhost target → returns fast.)
+        _SendRequest();
     }
 
     bool IsRequestComplete() {
