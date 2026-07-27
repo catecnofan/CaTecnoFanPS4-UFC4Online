@@ -27,6 +27,10 @@ static s32 g_connection_id_counter = 0;
 
 std::string host_override = "localhost";
 
+// CTF_HTTP: linear-trace instrumentation of the HTTP login flow (create*/send/abort/delete).
+// Grep the log for "CTF_HTTP" to get the whole story of a connect attempt in order.
+#define CTF_HTTP(...) LOG_INFO(Lib_Http, "CTF_HTTP " __VA_ARGS__)
+
 // CTF_TRACE probe: [0] is a fixed magic value (never rewritten, so it stays findable in memory
 // via a value search even after the game has called sceHttpSendRequest); [1] receives the last
 // req_id seen. Set a WRITE breakpoint on &ctf_trace_probe[1] to break only inside
@@ -94,6 +98,7 @@ int HttpRequestInternal_Release(HttpRequestInternal* request) {
 }
 
 int PS4_SYSV_ABI sceHttpAbortRequest() {
+    CTF_HTTP("AbortRequest (STUB) called  <-- game is aborting the request");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
@@ -182,28 +187,31 @@ int PS4_SYSV_ABI sceHttpCookieImport() {
 }
 
 int PS4_SYSV_ABI sceHttpCreateConnection() {
+    CTF_HTTP("CreateConnection (STUB) called -> returns ORBIS_OK(0) [no real connection created]");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpCreateConnectionWithURL(int tmplId, const char* url, bool enableKeepalive) {
+    CTF_HTTP("CreateConnectionWithURL ENTER tmpl_id={} url='{}' keepalive={}", tmplId,
+             url ? std::string(url) : std::string("<null>"), enableKeepalive ? 1 : 0);
     LOG_INFO(Lib_Http, "called tmpid = {} url = {} enableKeepalive = {}", tmplId,
              url ? std::string(url) : std::string(), enableKeepalive ? 1 : 0);
 
     if (!g_isHttpInitialized) {
-
+        CTF_HTTP("CreateConnectionWithURL RETURN BEFORE_INIT");
         return ORBIS_HTTP_ERROR_BEFORE_INIT;
     }
 
     if (url == nullptr) {
-
+        CTF_HTTP("CreateConnectionWithURL RETURN INVALID_VALUE (url==null)");
         return ORBIS_HTTP_ERROR_INVALID_VALUE;
     }
 
     std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
     auto tmpl_it = g_templates.find(tmplId);
     if (tmpl_it == g_templates.end()) {
-
+        CTF_HTTP("CreateConnectionWithURL RETURN INVALID_ID (template {} not found)", tmplId);
         return ORBIS_HTTP_ERROR_INVALID_ID;
     }
 
@@ -212,6 +220,8 @@ int PS4_SYSV_ABI sceHttpCreateConnectionWithURL(int tmplId, const char* url, boo
     std::lock_guard<std::mutex> lock_c(g_connections_map_mutex);
     g_connections.emplace(conn_id, std::make_pair(std::string(url), tmplId));
 
+    CTF_HTTP("CreateConnectionWithURL -> conn_id={} (stored url='{}', tmpl_id={})", conn_id,
+             std::string(url), tmplId);
     return conn_id;
 }
 
@@ -221,16 +231,18 @@ int PS4_SYSV_ABI sceHttpCreateEpoll() {
 }
 
 int PS4_SYSV_ABI sceHttpCreateRequest(s32 conn_id, s32 method, const char* path, u64 content_length) {
+    CTF_HTTP("CreateRequest ENTER conn_id={} method={} path='{}' content_length={}", conn_id, method,
+             path ? std::string(path) : std::string("<null>"), content_length);
     LOG_INFO(Lib_Http, "called conn_id = {} method = {} path = {} content_length = {}", conn_id,
              method, path ? std::string(path) : std::string(), content_length);
 
     if (!g_isHttpInitialized) {
-
+        CTF_HTTP("CreateRequest RETURN BEFORE_INIT");
         return ORBIS_HTTP_ERROR_BEFORE_INIT;
     }
 
     if (method >= ORBIS_INTERNAL_HTTP_REQUEST_METHOD_INVALID) {
-
+        CTF_HTTP("CreateRequest RETURN UNKNOWN_METHOD ({})", method);
         return ORBIS_HTTP_ERROR_UNKNOWN_METHOD;
     }
 
@@ -240,7 +252,7 @@ int PS4_SYSV_ABI sceHttpCreateRequest(s32 conn_id, s32 method, const char* path,
         std::lock_guard<std::mutex> lock_c(g_connections_map_mutex);
         auto conn_it = g_connections.find(conn_id);
         if (conn_it == g_connections.end()) {
-
+            CTF_HTTP("CreateRequest RETURN INVALID_ID (connection {} not found)", conn_id);
             return ORBIS_HTTP_ERROR_INVALID_ID;
         }
         base_url = conn_it->second.first;
@@ -260,7 +272,7 @@ int PS4_SYSV_ABI sceHttpCreateRequest(s32 conn_id, s32 method, const char* path,
     std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
     auto tmpl_it = g_templates.find(tmpl_id);
     if (tmpl_it == g_templates.end()) {
-
+        CTF_HTTP("CreateRequest RETURN INVALID_ID (template {} not found)", tmpl_id);
         return ORBIS_HTTP_ERROR_INVALID_ID;
     }
 
@@ -270,31 +282,37 @@ int PS4_SYSV_ABI sceHttpCreateRequest(s32 conn_id, s32 method, const char* path,
     std::lock_guard<std::mutex> lock_r(g_requests_map_mutex);
     g_requests.emplace(request_id, std::move(new_request));
 
+    CTF_HTTP("CreateRequest -> request_id={} (conn_id={} tmpl_id={} final_url='{}')", request_id,
+             conn_id, tmpl_id, url_str);
     return request_id;
 }
 
 int PS4_SYSV_ABI sceHttpCreateRequest2() {
+    CTF_HTTP("CreateRequest2 (STUB) called -> returns ORBIS_OK(0) [!! fake id 0, no real request "
+             "created — if the game uses this, req_id 0 is invalid downstream]");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpCreateRequestWithURL(s32 tmpl_id, s32 method, const char* url,
                                              u64 content_length) {
+    CTF_HTTP("CreateRequestWithURL ENTER tmpl_id={} method={} url='{}' content_length={}", tmpl_id,
+             method, url ? std::string(url) : std::string("<null>"), content_length);
     LOG_INFO(Lib_Http, "called template id = '{}' method = '{}' url = '{}', content length = '{}'",
              tmpl_id, method, url, content_length);
 
     if (!g_isHttpInitialized) {
-
+        CTF_HTTP("CreateRequestWithURL RETURN BEFORE_INIT");
         return ORBIS_HTTP_ERROR_BEFORE_INIT;
     }
 
     if (method >= ORBIS_INTERNAL_HTTP_REQUEST_METHOD_INVALID) {
-
+        CTF_HTTP("CreateRequestWithURL RETURN UNKNOWN_METHOD ({})", method);
         return ORBIS_HTTP_ERROR_UNKNOWN_METHOD;
     }
 
     if (url == nullptr) {
-
+        CTF_HTTP("CreateRequestWithURL RETURN INVALID_VALUE (url==null)");
         return ORBIS_HTTP_ERROR_INVALID_VALUE;
     }
 
@@ -306,7 +324,7 @@ int PS4_SYSV_ABI sceHttpCreateRequestWithURL(s32 tmpl_id, s32 method, const char
 
     auto it = g_templates.find(tmpl_id);
     if (it == g_templates.end()) {
-
+        CTF_HTTP("CreateRequestWithURL RETURN INVALID_ID (template {} not found)", tmpl_id);
         return ORBIS_HTTP_ERROR_INVALID_ID;
     }
 
@@ -315,15 +333,21 @@ int PS4_SYSV_ABI sceHttpCreateRequestWithURL(s32 tmpl_id, s32 method, const char
     std::lock_guard<std::mutex> lock_r(g_requests_map_mutex);
     g_requests.emplace(request_id, std::move(new_request));
 
+    CTF_HTTP("CreateRequestWithURL -> request_id={} (tmpl_id={} final_url='{}')", request_id,
+             tmpl_id, url_str);
     return request_id;
 }
 
 int PS4_SYSV_ABI sceHttpCreateRequestWithURL2() {
+    CTF_HTTP("CreateRequestWithURL2 (STUB) called -> returns ORBIS_OK(0) [!! fake id 0, no real "
+             "request created — if the game uses this, req_id 0 is invalid downstream]");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpCreateTemplate(s32 conn_id, const char* user_agent, s32 http_v, s32 flags) {
+    CTF_HTTP("CreateTemplate ENTER conn_id={} user_agent='{}' http_v={} flags={}", conn_id,
+             user_agent ? std::string(user_agent) : std::string("<null>"), http_v, flags);
     LOG_INFO(Lib_Http, "called, conn id: '{}', user agent: '{}', http version: '{}', flags: '{}'",
              conn_id, user_agent, http_v, flags);
 
@@ -347,6 +371,7 @@ int PS4_SYSV_ABI sceHttpCreateTemplate(s32 conn_id, const char* user_agent, s32 
 
     g_templates.emplace(template_id, new_template);
 
+    CTF_HTTP("CreateTemplate -> template_id={}", template_id);
     return template_id;
 }
 
@@ -391,11 +416,13 @@ int PS4_SYSV_ABI sceHttpDbgShowStat() {
 }
 
 int PS4_SYSV_ABI sceHttpDeleteConnection() {
+    CTF_HTTP("DeleteConnection (STUB) called  <-- game is tearing down the connection");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpDeleteRequest(s32 req_id) {
+    CTF_HTTP("DeleteRequest ENTER req_id={}  <-- game is deleting the request", req_id);
     LOG_INFO(Lib_Http, "called, request id: '{}'", req_id);
 
     if (!g_isHttpInitialized) {
@@ -416,6 +443,7 @@ int PS4_SYSV_ABI sceHttpDeleteRequest(s32 req_id) {
 }
 
 int PS4_SYSV_ABI sceHttpDeleteTemplate() {
+    CTF_HTTP("DeleteTemplate (STUB) called");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
@@ -784,27 +812,36 @@ int PS4_SYSV_ABI sceHttpSendRequest(int req_id, const void* post_data, u64 size)
     LOG_INFO(Lib_Http, "called, request id = '{}', size = '{}'", req_id, size);
 
     if (!g_isHttpInitialized) {
-
+        CTF_HTTP("SendRequest RETURN BEFORE_INIT (req_id={})", req_id);
         return ORBIS_HTTP_ERROR_BEFORE_INIT;
     }
 
     std::lock_guard<std::mutex> lock(g_requests_map_mutex);
+    const bool req_found = g_requests.find(req_id) != g_requests.end();
+    CTF_HTTP("SendRequest req_id={} request_found={} (g_requests size={}, g_connections size={}, "
+             "g_templates size={})",
+             req_id, req_found, g_requests.size(), g_connections.size(), g_templates.size());
     auto it = g_requests.find(req_id);
 
     if (it == g_requests.end()) {
-
+        CTF_HTTP("SendRequest RETURN INVALID_ID (req_id={} NOT in g_requests) <-- dies here "
+                 "silently; no _SendRequest, no real HTTP goes out",
+                 req_id);
         return ORBIS_HTTP_ERROR_INVALID_ID;
     }
 
     if (!it->second.IsSent() && !it->second.req_template->is_async) {
-
+        CTF_HTTP("SendRequest RETURN BEFORE_SEND (req_id={} not sent & template not async)", req_id);
         return ORBIS_HTTP_ERROR_BEFORE_SEND;
     }
 
     it->second.SetPostData(post_data, size);
 
+    CTF_HTTP("SendRequest req_id={} -> entering _SendRequest (about to httplib connect+send)",
+             req_id);
     it->second.SendRequest();
 
+    CTF_HTTP("SendRequest req_id={} -> _SendRequest dispatched, returning OK", req_id);
     return ORBIS_OK;
 }
 

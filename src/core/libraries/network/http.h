@@ -266,6 +266,9 @@ private:
     u64 post_data_size = 0;
 
     void _SendRequest() {
+        LOG_INFO(Lib_Http,
+                 "CTF_HTTP _SendRequest ENTER id={} host='{}' path='{}' method={} url='{}'", id,
+                 host, path, static_cast<int>(method), url);
 
         httplib::Client cli(host);
 
@@ -328,10 +331,15 @@ private:
         }
 
         if (!response) {
-
+            LOG_INFO(Lib_Http,
+                     "CTF_HTTP _SendRequest httplib FAILED (no response) id={} host='{}' "
+                     "error_enum={} [0=Success 1=Unknown 2=Connection 3=BindIP 4=Read 5=Write "
+                     "6=ExceedRedirect 7=Canceled 8=SSLConnection 9=SSLLoadingCerts 10=SSLServerVerify]",
+                     id, host, static_cast<int>(response.error()));
             return;
         }
 
+        LOG_INFO(Lib_Http, "CTF_HTTP _SendRequest httplib OK id={} status={}", id, response->status);
         status_code = response->status;
 
         if (response && response->status / 100 == 2) {
