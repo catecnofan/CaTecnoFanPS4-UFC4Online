@@ -124,7 +124,9 @@ int PS4_SYSV_ABI sceHttpAddQuery() {
 }
 
 int PS4_SYSV_ABI sceHttpAddRequestHeader(int id, const char* name, const char* value, s32 mode) {
-
+    CTF_HTTP("AddRequestHeader req_id={} name='{}' value='{}' mode={}", id,
+             name ? std::string(name) : std::string("<null>"),
+             value ? std::string(value) : std::string("<null>"), mode);
     LOG_INFO(Lib_Http, "called request id = '{}', name = '{}', value = '{}', mode = '{}'", id,
              std::string(name), std::string(value), mode);
 
@@ -338,11 +340,99 @@ int PS4_SYSV_ABI sceHttpCreateRequestWithURL(s32 tmpl_id, s32 method, const char
     return request_id;
 }
 
-int PS4_SYSV_ABI sceHttpCreateRequestWithURL2() {
-    CTF_HTTP("CreateRequestWithURL2 (STUB) called -> returns ORBIS_OK(0) [!! fake id 0, no real "
-             "request created — if the game uses this, req_id 0 is invalid downstream]");
-    LOG_ERROR(Lib_Http, "(STUBBED) called");
-    return ORBIS_OK;
+// CTF: WithURL2 passes the HTTP method as a STRING (per OpenOrbis:
+//   sceHttpCreateRequestWithURL2(connId, const char* method, const char* url, contentLength)).
+// Map it to the internal enum used by RequestObj / _SendRequest.
+static s32 CtfHttpMethodStringToEnum(const char* method) {
+    std::string s = method ? method : "";
+    for (auto& c : s) {
+        if (c >= 'a' && c <= 'z') {
+            c = static_cast<char>(c - 'a' + 'A');
+        }
+    }
+    if (s == "GET")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_GET;
+    if (s == "POST")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_POST;
+    if (s == "HEAD")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_HEAD;
+    if (s == "OPTIONS")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_OPTIONS;
+    if (s == "PUT")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_PUT;
+    if (s == "DELETE")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_DELETE;
+    if (s == "TRACE")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_TRACE;
+    if (s == "CONNECT")
+        return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_CONNECT;
+    return ORBIS_INTERNAL_HTTP_REQUEST_METHOD_INVALID;
+}
+
+int PS4_SYSV_ABI sceHttpCreateRequestWithURL2(s32 id, const char* method, const char* url,
+                                              u64 content_length) {
+    CTF_HTTP("CreateRequestWithURL2 ENTER id={} method='{}' url='{}' content_length={}", id,
+             method ? std::string(method) : std::string("<null>"),
+             url ? std::string(url) : std::string("<null>"), content_length);
+
+    if (!g_isHttpInitialized) {
+        CTF_HTTP("CreateRequestWithURL2 RETURN BEFORE_INIT");
+        return ORBIS_HTTP_ERROR_BEFORE_INIT;
+    }
+
+    if (url == nullptr || method == nullptr) {
+        CTF_HTTP("CreateRequestWithURL2 RETURN INVALID_VALUE (url or method null)");
+        return ORBIS_HTTP_ERROR_INVALID_VALUE;
+    }
+
+    const s32 method_enum = CtfHttpMethodStringToEnum(method);
+    if (method_enum >= ORBIS_INTERNAL_HTTP_REQUEST_METHOD_INVALID) {
+        CTF_HTTP("CreateRequestWithURL2 RETURN UNKNOWN_METHOD (method='{}')", std::string(method));
+        return ORBIS_HTTP_ERROR_UNKNOWN_METHOD;
+    }
+
+    // This fork's WithURL treats the first id as a TEMPLATE id. But the real API's first param is
+    // ambiguous (named connId in OpenOrbis). Resolve robustly: try template first, else treat it
+    // as a connection id and use that connection's template. Log which interpretation hit.
+    s32 tmpl_id = id;
+    bool as_template = false;
+    bool as_connection = false;
+    {
+        std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
+        as_template = g_templates.find(id) != g_templates.end();
+    }
+    if (!as_template) {
+        std::lock_guard<std::mutex> lock_c(g_connections_map_mutex);
+        auto conn_it = g_connections.find(id);
+        if (conn_it != g_connections.end()) {
+            tmpl_id = conn_it->second.second;
+            as_connection = true;
+        }
+    }
+    CTF_HTTP("CreateRequestWithURL2 id={} resolved: as_template={} as_connection={} -> tmpl_id={}",
+             id, as_template, as_connection, tmpl_id);
+
+    std::string url_str = ReplaceHost(std::string(url), host_override);
+
+    s32 request_id;
+    {
+        std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
+        auto it = g_templates.find(tmpl_id);
+        if (it == g_templates.end()) {
+            CTF_HTTP("CreateRequestWithURL2 RETURN INVALID_ID (template {} not found)", tmpl_id);
+            return ORBIS_HTTP_ERROR_INVALID_ID;
+        }
+
+        request_id = g_request_id_counter++;
+        auto new_request = RequestObj(request_id, &it->second, method_enum, url_str, content_length);
+
+        std::lock_guard<std::mutex> lock_r(g_requests_map_mutex);
+        g_requests.emplace(request_id, std::move(new_request));
+    }
+
+    CTF_HTTP("CreateRequestWithURL2 -> request_id={} (tmpl_id={} method_enum={} final_url='{}')",
+             request_id, tmpl_id, method_enum, url_str);
+    return request_id;
 }
 
 int PS4_SYSV_ABI sceHttpCreateTemplate(s32 conn_id, const char* user_agent, s32 http_v, s32 flags) {
@@ -992,6 +1082,7 @@ int PS4_SYSV_ABI sceHttpSetRedirectCallback() {
 }
 
 int PS4_SYSV_ABI sceHttpSetRequestContentLength() {
+    CTF_HTTP("SetRequestContentLength (STUB) called");
     LOG_ERROR(Lib_Http, "(STUBBED) called");
     return ORBIS_OK;
 }
