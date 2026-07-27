@@ -17,6 +17,15 @@ namespace Libraries::Net {
 using FDTable = Common::Singleton<Core::FileSys::HandleTable>;
 
 int PS4_SYSV_ABI sys_connect(OrbisNetId s, const OrbisNetSockaddr* addr, u32 addrlen) {
+    if (addr != nullptr && addrlen >= sizeof(OrbisNetSockaddrIn)) {
+        const auto* a = reinterpret_cast<const OrbisNetSockaddrIn*>(addr);
+        const u32 ia = a->sin_addr;
+        const u16 pt = static_cast<u16>((a->sin_port >> 8) | (a->sin_port << 8));
+        LOG_INFO(Lib_Net, "CTF_TRACE sys_connect: fd={} dst={}.{}.{}.{}:{}", s, ia & 0xff,
+                 (ia >> 8) & 0xff, (ia >> 16) & 0xff, (ia >> 24) & 0xff, pt);
+    } else {
+        LOG_INFO(Lib_Net, "CTF_TRACE sys_connect: fd={} (no/short addr, addrlen={})", s, addrlen);
+    }
     auto file = FDTable::Instance()->GetSocket(s);
     if (!file) {
         *Libraries::Kernel::__Error() = ORBIS_NET_EBADF;
