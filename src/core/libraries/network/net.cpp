@@ -1648,7 +1648,8 @@ int PS4_SYSV_ABI sceNetResolverStartNtoaMultipleRecordsEx() {
 }
 
 int PS4_SYSV_ABI sceNetSend(OrbisNetId s, const void* buf, u64 len, int flags) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSend: called fd={} len={}", s, len);
+    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSend: fd={} len={} payload=[{}]", s, len,
+             CtfTraceHexDump(buf, len));
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -1666,7 +1667,17 @@ int PS4_SYSV_ABI sceNetSendmsg(OrbisNetId s, const OrbisNetMsghdr* msg, int flag
 
 int PS4_SYSV_ABI sceNetSendto(OrbisNetId s, const void* buf, u64 len, int flags,
                               const OrbisNetSockaddr* addr, u32 addrlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSendto: called fd={} len={} flags={:#x}", s, len, flags);
+    if (addr != nullptr && addrlen >= sizeof(OrbisNetSockaddrIn)) {
+        const auto* a = reinterpret_cast<const OrbisNetSockaddrIn*>(addr);
+        const u32 ip = ntohl(a->sin_addr);
+        LOG_INFO(Lib_Net,
+                 "CTF_TRACE sceNetSendto: fd={} len={} flags={:#x} dst={}.{}.{}.{}:{} payload=[{}]",
+                 s, len, flags, (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff,
+                 ntohs(a->sin_port), CtfTraceHexDump(buf, len));
+    } else {
+        LOG_INFO(Lib_Net, "CTF_TRACE sceNetSendto: fd={} len={} flags={:#x} (no addr) payload=[{}]",
+                 s, len, flags, CtfTraceHexDump(buf, len));
+    }
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
